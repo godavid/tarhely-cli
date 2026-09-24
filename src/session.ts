@@ -4,6 +4,7 @@
 
 import type { Page } from "playwright";
 import { launchBrowser } from "./browser.js";
+import { TarhelyError } from "./errors.js";
 import { loginToKau } from "./kau/login.js";
 import type { Reporter } from "./report.js";
 import type { CredentialStore } from "./store/credentials.js";
@@ -47,7 +48,8 @@ export async function withSession<T>(
     await primeApiHeaders(browser.page, sniffed, options.reporter.step);
     return await work({ page: browser.page, sniffed, mailboxes: sniffed.mailboxes });
   } catch (error) {
-    if (loggedIn) {
+    const safeBeforeSecrets = error instanceof TarhelyError && error.capturable;
+    if (loggedIn || safeBeforeSecrets) {
       await options.reporter.capture(browser.page, "error");
     }
     throw error;

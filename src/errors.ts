@@ -15,6 +15,12 @@ export type ExitCode = (typeof EXIT_CODES)[keyof typeof EXIT_CODES];
 export class TarhelyError extends Error {
   readonly code: ExitCode;
   readonly hint: string | null;
+  /**
+   * Készülhet-e diagnosztika (képernyőkép) a hiba pillanatában. Alapból nem:
+   * a belépési űrlap kitöltött mezői nem kerülhetnek artefaktumba. Csak az a
+   * hiba kapcsolja be, amelyik bizonyosan a titkok begépelése ELŐTT keletkezett.
+   */
+  capturable = false;
 
   constructor(code: ExitCode, message: string, hint?: string) {
     super(message);

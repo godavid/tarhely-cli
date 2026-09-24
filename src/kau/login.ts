@@ -69,6 +69,22 @@ async function advanceToKauSelection(page: Page, step: StepFn): Promise<void> {
   }
 }
 
+// A KAÜ-választón a DÁP-os elrendezés egy `div.dap-login` réteggel fedheti a
+// gombot: a Playwright akcionálhatósági ellenőrzése ilyenkor a timeoutig
+// „intercepts pointer events"-szel próbálkozik, hiába látható a gomb. A gomb
+// inline `onclick`-je egy rejtett formot submittel, ezért a click esemény
+// közvetlen kiváltása (réteg-ellenőrzés nélkül) ugyanazt az utat indítja el.
+async function clickKauButton(page: Page, step: StepFn): Promise<void> {
+  const button = page.getByRole("button", { name: KAU_BUTTON_LABEL });
+  try {
+    await button.click({ timeout: 5_000 });
+    return;
+  } catch (error) {
+    step("kau-gomb", true, `közvetlen kattintás nem ment (${message(error)}), esemény-kiváltás`);
+  }
+  await button.dispatchEvent("click", undefined, { timeout: 5_000 });
+}
+
 async function isVisible(page: Page, selector: string): Promise<boolean> {
   return page
     .locator(selector)
@@ -106,12 +122,15 @@ export async function loginToKau(page: Page, options: LoginOptions, step: StepFn
   }
 
   try {
-    await page.getByRole("button", { name: KAU_BUTTON_LABEL }).click({ timeout: 20_000 });
+    await clickKauButton(page, step);
     await page.waitForSelector("#name", { timeout: 30_000 });
   } catch (error) {
-    throw portalChangedError(
+    const failure = portalChangedError(
       `nem található az „${KAU_BUTTON_LABEL}" belépési út (${message(error)})`
     );
+    // Itt még semmilyen titok nincs a lapon, a képernyőkép veszélytelen és hasznos.
+    failure.capturable = true;
+    throw failure;
   }
   await page.waitForTimeout(1200);
   step("kau-form", true);
@@ -138,9 +157,14 @@ export async function loginToKau(page: Page, options: LoginOptions, step: StepFn
   await page.fill("#identifier", totpCode(totpSeed, Date.now() / 1000));
   await page.getByRole("button", { name: "Bejelentkezés" }).click();
   await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(8000);
 
+  // A KAÜ a SAML-választ egy köztes `/proxy/saml/response` lapon át küldi
+  // vissza a célfelületnek; ez helyben lassabb lehet, mint a fix várakozás.
   const targetHost = new URL(targetUrl).host;
+  await page
+    .waitForURL((url) => url.host.includes(targetHost), { timeout: 45_000 })
+    .catch(() => {});
+  await page.waitForTimeout(2000);
   if (!page.url().includes(targetHost)) {
     if (await isVisible(page, "#identifier")) {
       throw loginFailedError(
@@ -152,6 +176,20 @@ export async function loginToKau(page: Page, options: LoginOptions, step: StepFn
   step("logged-in", true, page.url());
 }
 
+// A Playwright hívásnaplójából az első sor mellé az OKOT is kiemeljük
+// („intercepts pointer events", „not visible"…): ez különbözteti meg a portál
+// átalakulását a hálózati lassúságtól.
 function message(error: unknown): string {
-  return error instanceof Error ? (error.message.split("\n")[0] ?? error.message) : String(error);
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+  const lines = error.message
+    .replace(/\u001b\[\d+m/g, "")
+    .split("\n")
+    .map((line) => line.trim());
+  const first = lines[0] ?? error.message;
+  const reason = lines.find((line) =>
+    /intercepts pointer events|not visible|not enabled|not attached|hidden/.test(line)
+  );
+  return reason ? `${first} ${reason.replace(/^-\s*/, "")}` : first;
 }
