@@ -33,17 +33,23 @@ export async function withSession<T>(
 ): Promise<T> {
   const credentials = options.store.require();
   const browser = await launchBrowser({ headed: options.headed });
+  // A belépési lépésekről SOHA nincs diagnosztika: a kitöltött mezők értéke
+  // bekerülne a képernyőképbe. A capture csak sikeres belépés után él.
+  let loggedIn = false;
   try {
     await loginToKau(
       browser.page,
       { targetUrl: TARHELY_URL, ...credentials },
       options.reporter.step
     );
+    loggedIn = true;
     const sniffed = attachApiListeners(browser.page);
     await primeApiHeaders(browser.page, sniffed, options.reporter.step);
     return await work({ page: browser.page, sniffed, mailboxes: sniffed.mailboxes });
   } catch (error) {
-    await options.reporter.capture(browser.page, "error");
+    if (loggedIn) {
+      await options.reporter.capture(browser.page, "error");
+    }
     throw error;
   } finally {
     await browser.close();

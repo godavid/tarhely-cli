@@ -22,7 +22,11 @@ export async function runForget(options: ForgetOptions): Promise<number> {
       return reporter.finish({ removed: false });
     }
   }
-  const removed = store.clear();
-  reporter.info(removed ? "A belépő törölve a kulcstartóból." : "Nem volt tárolt belépő.");
-  return reporter.finish({ removed });
+  try {
+    const removed = store.clear();
+    reporter.info(removed ? "A belépő törölve a kulcstartóból." : "Nem volt tárolt belépő.");
+    return reporter.finish({ removed });
+  } catch (error) {
+    return reporter.fail(error);
+  }
 }

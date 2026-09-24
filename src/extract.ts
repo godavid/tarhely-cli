@@ -35,21 +35,27 @@ export function isSafeEntryPath(name: string): boolean {
  * hibával áll meg, nem csak az adott fájl marad ki.
  */
 export function extractZip(bytes: Buffer, targetDir: string): string[] {
-  const entries = unzipSync(new Uint8Array(bytes));
-  const written: string[] = [];
+  // A szűrő a kibontás ELŐTT fut, a központi jegyzék `originalSize` mezőjéből:
+  // egy apró, erősen tömörített zip így nem tudja kimeríteni a memóriát.
   let total = 0;
+  const entries = unzipSync(new Uint8Array(bytes), {
+    filter(info) {
+      if (info.name.endsWith("/")) {
+        return false;
+      }
+      if (!isSafeEntryPath(info.name)) {
+        throw new Error(`Gyanús útvonal a zipben, a kibontás leáll: ${info.name}`);
+      }
+      total += info.originalSize;
+      if (total > MAX_TOTAL_BYTES) {
+        throw new Error("A zip kibontott mérete meghaladja a 200 MB-os korlátot.");
+      }
+      return true;
+    }
+  });
+  const written: string[] = [];
 
   for (const [name, data] of Object.entries(entries)) {
-    if (name.endsWith("/")) {
-      continue;
-    }
-    if (!isSafeEntryPath(name)) {
-      throw new Error(`Gyanús útvonal a zipben, a kibontás leáll: ${name}`);
-    }
-    total += data.byteLength;
-    if (total > MAX_TOTAL_BYTES) {
-      throw new Error("A zip kibontott mérete meghaladja a 200 MB-os korlátot.");
-    }
     const relative = name.replace(/\\/g, "/").split(posix.sep).join(sep);
     const target = join(targetDir, relative);
     mkdirSync(dirname(target), { recursive: true });

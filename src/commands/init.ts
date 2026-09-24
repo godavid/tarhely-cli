@@ -43,7 +43,11 @@ export async function runInit(options: InitOptions): Promise<number> {
     return reporter.fail(new Error("A felhasználónév és a jelszó nem lehet üres."));
   }
 
-  store.save({ username, password, totpSeed: totpSeed.replace(/[\s-]+/g, "").toUpperCase() });
+  try {
+    store.save({ username, password, totpSeed: totpSeed.replace(/[\s-]+/g, "").toUpperCase() });
+  } catch (error) {
+    return reporter.fail(error);
+  }
   reporter.info("\nBelépő elmentve a kulcstartóba (tarhely-cli / default).");
 
   if (!isChromiumInstalled()) {

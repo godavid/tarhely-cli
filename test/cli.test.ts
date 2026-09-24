@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCli } from "../src/cli.js";
+import { parseCli } from "../src/main.js";
 
 describe("parseCli", () => {
   it("provides default values when no options are specified", () => {
