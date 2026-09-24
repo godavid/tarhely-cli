@@ -22,6 +22,8 @@ export interface LoginOptions {
 export type StepFn = (name: string, ok: boolean, detail?: string | null) => void;
 
 const KAU_BUTTON_LABEL = "Ügyfélkapu+ hitelesítő alkalmazással";
+// A Playwright hívásnaplója színezett; a vezérlőkaraktert nem literálként írjuk.
+const ANSI_ESCAPE = new RegExp(`${String.fromCharCode(27)}\\[\\d+m`, "g");
 
 async function acceptCookies(page: Page): Promise<void> {
   for (const label of ["Megértettem", "Elfogadom", "Rendben"]) {
@@ -184,7 +186,7 @@ function message(error: unknown): string {
     return String(error);
   }
   const lines = error.message
-    .replace(/\u001b\[\d+m/g, "")
+    .replace(ANSI_ESCAPE, "")
     .split("\n")
     .map((line) => line.trim());
   const first = lines[0] ?? error.message;
