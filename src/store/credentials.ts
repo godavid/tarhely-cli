@@ -5,6 +5,8 @@
 // szerverekre és CI-ra van: ott a titkot a futtató környezet adja, a gépen nem
 // marad. Fájlba a belépő SOHA nem kerül.
 
+import { createRequire } from "node:module";
+
 import { EXIT_CODES, noCredentialsError, TarhelyError } from "../errors.js";
 
 export interface Credentials {
@@ -168,9 +170,5 @@ function requireKeyring(): {
   };
 } {
   // Szinkron betöltés kell (a store API szinkron); a natív csomag CommonJS.
-  // biome-ignore lint/suspicious/noExplicitAny: a createRequire típusa ezt adja
-  const require = (globalThis as any).process
-    .getBuiltinModule("node:module")
-    .createRequire(import.meta.url);
-  return require("@napi-rs/keyring");
+  return createRequire(import.meta.url)("@napi-rs/keyring");
 }
