@@ -1,0 +1,55 @@
+{
+  "name": "tarhely-cli",
+  "version": "0.1.0",
+  "description": "Ügyfélkapu+ (KAÜ) belépés és a hivatali tárhely beérkezett leveleinek letöltése parancssorból. Csak olvas, agent-barát.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "tarhely-cli": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "ugyfelkapu",
+    "ügyfélkapu",
+    "tarhely",
+    "tárhely",
+    "hivatali-kapu",
+    "kau",
+    "e-ugyintezes",
+    "playwright",
+    "cli",
+    "agent-skill"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/godavid/tarhely-cli.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@napi-rs/keyring": "^2.1.0",
+    "fflate": "^0.8.3",
+    "playwright": "^1.63.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/node": "^20.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.1"
+  },
+  "packageManager": "pnpm@11.6.0"
+}

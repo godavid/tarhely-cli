@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+
+# Titkok és futási kimenet soha nem kerülnek a repóba
+.env
+.env.*
+tarhely-out/
+.tarhely/
+*.png
+*.aria.yaml
+*.jsonl
+debug/
+*.tgz
+.DS_Store
