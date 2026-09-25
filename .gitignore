@@ -5,6 +5,7 @@ coverage/
 # Titkok és futási kimenet soha nem kerülnek a repóba
 .env
 .env.*
+/tarhely/
 tarhely-out/
 .tarhely/
 *.png
