@@ -71,15 +71,58 @@ async function advanceToKauSelection(page: Page, step: StepFn): Promise<void> {
   }
 }
 
-// A KAÜ-választón a DÁP-os elrendezés egy `div.dap-login` réteggel fedheti a
-// gombot: a Playwright akcionálhatósági ellenőrzése ilyenkor a timeoutig
-// „intercepts pointer events"-szel próbálkozik, hiába látható a gomb. A gomb
-// inline `onclick`-je egy rejtett formot submittel, ezért a click esemény
-// közvetlen kiváltása (réteg-ellenőrzés nélkül) ugyanazt az utat indítja el.
+// A célfelület (tárhely) egy köztes lapon át irányít a KAÜ-ra: a `goto` már a
+// köztes lapon visszatér, a KAÜ-lap szkriptje pedig csak a saját `load`
+// eseményére köti be a lenyíló kezelőjét. Ha előbb kattintunk, a lenyíló csukva
+// marad, és a gomb a csukott tartalom alatt „intercepts pointer events"-szel
+// elérhetetlen. Ezért előbb a KAÜ-lap teljes betöltését várjuk meg.
+async function waitForKauPage(page: Page): Promise<void> {
+  await page
+    .waitForURL((url) => url.hostname.endsWith("kau.gov.hu"), {
+      waitUntil: "load",
+      timeout: 30_000
+    })
+    .catch(() => {});
+}
+
+// A lenyíló nyitását az `aria-expanded` állapotán ellenőrizzük, nem időzítésen.
+async function openKauDropdown(page: Page): Promise<boolean> {
+  const dropdown = page.locator("#dropdown-control-id");
+  const hasDropdown = await dropdown
+    .count()
+    .then((count) => count > 0)
+    .catch(() => false);
+  if (!hasDropdown) {
+    return true;
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((await dropdown.getAttribute("aria-expanded").catch(() => null)) !== "true") {
+      await dropdown.click({ timeout: 10_000 });
+    }
+    const opened = await page
+      .waitForFunction(
+        () =>
+          document.getElementById("dropdown-control-id")?.getAttribute("aria-expanded") === "true",
+        null,
+        { timeout: 4_000 }
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (opened) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Végső tartalék, ha a lenyíló a betöltés után sem nyílik ki: a gomb inline
+// `onclick`-je egy formot submittel, a click esemény közvetlen kiváltása ezt
+// akkor is elindítja, ha a gombot egy réteg fedi. Lépésként naplózzuk, hogy a
+// futásnaplóból látsszon, ha a portál ismét másképp viselkedik.
 async function clickKauButton(page: Page, step: StepFn): Promise<void> {
   const button = page.getByRole("button", { name: KAU_BUTTON_LABEL });
   try {
-    await button.click({ timeout: 5_000 });
+    await button.click({ timeout: 8_000 });
     return;
   } catch (error) {
     step("kau-gomb", true, `közvetlen kattintás nem ment (${message(error)}), esemény-kiváltás`);
@@ -111,17 +154,9 @@ export async function loginToKau(page: Page, options: LoginOptions, step: StepFn
 
   await advanceToKauSelection(page, step);
 
-  // A dropdownt előbb ki kell nyitni, különben a lenti gombok „intercepts
-  // pointer events" hibát adnak, hiába láthatók.
-  const dropdown = page.locator("#dropdown-control-id");
-  const hasDropdown = await dropdown
-    .count()
-    .then((count) => count > 0)
-    .catch(() => false);
-  if (hasDropdown) {
-    await dropdown.click({ timeout: 15_000 });
-    await page.waitForTimeout(1200);
-  }
+  await waitForKauPage(page);
+  const opened = await openKauDropdown(page);
+  step("kau-lenyilo", opened, opened ? null : "nem nyílt ki, tartalék út");
 
   try {
     await clickKauButton(page, step);
