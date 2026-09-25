@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
 import { EXIT_CODES, TarhelyError } from "../errors.js";
+import { assertOutDirNotCommittable } from "../outdir.js";
 import type { Reporter } from "../report.js";
 import { selectMailboxes, withSession } from "../session.js";
 import type { CredentialStore } from "../store/credentials.js";
@@ -21,6 +22,7 @@ export async function runDownload(options: DownloadCommandOptions): Promise<numb
   const { reporter } = options;
   const outDir = resolve(options.outDir);
   try {
+    assertOutDirNotCommittable(outDir);
     const result = await withSession(options, async (session) => {
       const mailboxes = selectMailboxes(session.mailboxes, options.mailbox);
       if (mailboxes.length === 0) {
