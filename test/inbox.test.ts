@@ -104,15 +104,15 @@ function createHarness(
     if (request.path === "/levelezes/api/mailbox/details") {
       return { status: 200, body: { hasznaltKvota: 10, kvota: 200 } };
     }
-    const detail = request.path.match(/^\/levelezes\/api\/uzenet\/beerkezett\/([^/]+)$/);
-    if (detail) {
-      return { status: 200, body: details[decodeURIComponent(detail[1])] ?? {} };
+    const detailEid = request.path.match(/^\/levelezes\/api\/uzenet\/beerkezett\/([^/]+)$/)?.[1];
+    if (detailEid !== undefined) {
+      return { status: 200, body: details[decodeURIComponent(detailEid)] ?? {} };
     }
-    const download = request.path.match(
+    const downloadEid = request.path.match(
       /^\/levelezes\/api\/uzenet\/letoltes\/beerkezett\/([^/]+)$/
-    );
-    if (download) {
-      const eid = decodeURIComponent(download[1]);
+    )?.[1];
+    if (downloadEid !== undefined) {
+      const eid = decodeURIComponent(downloadEid);
       if (failingDownloads.has(eid)) {
         return { status: 500, body: "Szerver hiba" };
       }
@@ -370,7 +370,7 @@ describe("downloadNewLetters", () => {
     const result = await runDownload(harness, outDir);
     const label = "allamhatosagi-level-nagyon-hosszu-leiras";
     expect(label).toHaveLength(40);
-    expect(result.letters[0].dir).toBe(`${testMailbox.slug}/2026-01-01_${EID_0101}_${label}`);
+    expect(result.letters[0]?.dir).toBe(`${testMailbox.slug}/2026-01-01_${EID_0101}_${label}`);
     expect(fs.existsSync(letterDir(outDir, EID_0101, "2026-01-01", label))).toBe(true);
   });
 
@@ -383,7 +383,7 @@ describe("downloadNewLetters", () => {
     );
 
     const result = await runDownload(harness, outDir);
-    expect(result.letters[0].dir).toBe(`${testMailbox.slug}/2026-01-01_${EID_0101}_vegzes`);
+    expect(result.letters[0]?.dir).toBe(`${testMailbox.slug}/2026-01-01_${EID_0101}_vegzes`);
   });
 
   it("uses ismeretlen-datum when the letter has no arrival date", async () => {
@@ -395,7 +395,7 @@ describe("downloadNewLetters", () => {
     );
 
     const result = await runDownload(harness, outDir);
-    expect(result.letters[0].dir).toBe(
+    expect(result.letters[0]?.dir).toBe(
       `${testMailbox.slug}/ismeretlen-datum_${EID_0101}_${DEFAULT_LABEL}`
     );
     expect(fs.existsSync(letterDir(outDir, EID_0101, "ismeretlen-datum"))).toBe(true);
@@ -422,7 +422,7 @@ describe("downloadNewLetters", () => {
     expect(
       fs.readFileSync(path.join(dir, "kibontva", "melleklet", "kiserolevel.txt"), "utf8")
     ).toBe("kiserolevel-tartalom");
-    expect(result.letters[0].extracted).toEqual([
+    expect(result.letters[0]?.extracted).toEqual([
       path.join("kibontva", "irat.pdf"),
       path.join("kibontva", "melleklet", "kiserolevel.txt")
     ]);
@@ -431,7 +431,7 @@ describe("downloadNewLetters", () => {
     const second = await runDownload(harness, noExtractOutDir);
     const noExtractDir = letterDir(noExtractOutDir, EID_0101, "2026-01-01");
     expect(fs.existsSync(path.join(noExtractDir, "kibontva"))).toBe(false);
-    expect(second.letters[0].extracted).toEqual([]);
+    expect(second.letters[0]?.extracted).toEqual([]);
     expect(fs.readFileSync(path.join(noExtractDir, "csomag.zip"))).toEqual(zipBytes);
   });
 
@@ -447,7 +447,7 @@ describe("downloadNewLetters", () => {
     const dir = letterDir(outDir, EID_0101, "2026-01-01");
     expect(fs.readFileSync(path.join(dir, "level-1.pdf"), "utf8")).toBe("nem-zip-pdf-tartalom");
     expect(fs.existsSync(path.join(dir, "kibontva"))).toBe(false);
-    expect(result.letters[0].extracted).toEqual([]);
+    expect(result.letters[0]?.extracted).toEqual([]);
   });
 
   it("downloads only letters that arrived on or after the since date", async () => {
