@@ -65,6 +65,14 @@ describe("isSafeEntryPath", () => {
   });
 });
 
+function buildManyEntryZip(entryCount: number): Buffer {
+  const files: Record<string, Uint8Array> = {};
+  for (let index = 0; index < entryCount; index++) {
+    files[`bejegyzes-${index}.txt`] = new Uint8Array(0);
+  }
+  return Buffer.from(zipSync(files));
+}
+
 describe("extractZip", () => {
   it("extracts zip entries to target directory and returns relative paths", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-test-"));
@@ -109,4 +117,35 @@ describe("extractZip", () => {
     );
     expect(() => extractZip(zipData, tmpDir)).toThrow("Gyanús útvonal a zipben");
   });
+
+  it("throws when the zip contains more than 2000 entries and writes no files", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-test-"));
+    const zipData = buildManyEntryZip(2001);
+    expect(() => extractZip(zipData, tmpDir)).toThrow(
+      "A zip bejegyzésszáma meghaladja a 2000-es korlátot."
+    );
+    expect(fs.readdirSync(tmpDir)).toEqual([]);
+  });
+
+  it("extracts a zip with exactly 2000 entries", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-test-"));
+    const zipData = buildManyEntryZip(2000);
+    const written = extractZip(zipData, tmpDir);
+    expect(written).toHaveLength(2000);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "creates directories with 0o700 mode and extracted files with 0o600 mode",
+    () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-test-"));
+      const zipData = Buffer.from(
+        zipSync({
+          "almappa/irat.pdf": Buffer.from("tartalom")
+        })
+      );
+      extractZip(zipData, tmpDir);
+      expect(fs.statSync(path.join(tmpDir, "almappa")).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(tmpDir, "almappa", "irat.pdf")).mode & 0o777).toBe(0o600);
+    }
+  );
 });

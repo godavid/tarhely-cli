@@ -9,6 +9,7 @@ import { unzipSync } from "fflate";
 
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 const MAX_TOTAL_BYTES = 200 * 1024 * 1024;
+const MAX_ENTRIES = 2000;
 
 export function isZip(bytes: Buffer): boolean {
   return bytes.length >= 4 && bytes.subarray(0, 4).equals(ZIP_SIGNATURE);
@@ -37,9 +38,16 @@ export function isSafeEntryPath(name: string): boolean {
 export function extractZip(bytes: Buffer, targetDir: string): string[] {
   // A szűrő a kibontás ELŐTT fut, a központi jegyzék `originalSize` mezőjéből:
   // egy apró, erősen tömörített zip így nem tudja kimeríteni a memóriát.
+  // A lemezre írás csak a teljes szűrés után történik, így ha valamelyik
+  // korlát hibát dob, semmi nem kerül a célmappába.
   let total = 0;
+  let entryCount = 0;
   const entries = unzipSync(new Uint8Array(bytes), {
     filter(info) {
+      entryCount += 1;
+      if (entryCount > MAX_ENTRIES) {
+        throw new Error("A zip bejegyzésszáma meghaladja a 2000-es korlátot.");
+      }
       if (info.name.endsWith("/")) {
         return false;
       }
@@ -58,8 +66,8 @@ export function extractZip(bytes: Buffer, targetDir: string): string[] {
   for (const [name, data] of Object.entries(entries)) {
     const relative = name.replace(/\\/g, "/").split(posix.sep).join(sep);
     const target = join(targetDir, relative);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, data);
+    mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
+    writeFileSync(target, data, { mode: 0o600 });
     written.push(relative);
   }
 
