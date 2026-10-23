@@ -152,8 +152,9 @@ async function downloadOne(
   const label = slugify(row.desc || row.type || "level").slice(0, 40);
   const dir = join(mailbox.slug, `${row.receivedOn || "ismeretlen-datum"}_${eid}_${label}`);
   const absolute = join(options.outDir, dir);
-  mkdirSync(absolute, { recursive: true });
-  writeFileSync(join(absolute, file.name), file.bytes);
+  // A hivatalos iratokat tartalmazó mappa csak a tulajdonos számára érhető el.
+  mkdirSync(absolute, { recursive: true, mode: 0o700 });
+  writeFileSync(join(absolute, file.name), file.bytes, { mode: 0o600 });
 
   const extracted =
     options.extract && isZip(file.bytes) ? extractZip(file.bytes, join(absolute, "kibontva")) : [];
@@ -173,6 +174,9 @@ async function downloadOne(
     extracted: extracted.map((name) => join("kibontva", name)),
     downloadedAt: now().toISOString()
   };
-  writeFileSync(join(absolute, "meta.json"), `${JSON.stringify(entry, null, 2)}\n`, "utf8");
+  writeFileSync(join(absolute, "meta.json"), `${JSON.stringify(entry, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600
+  });
   return entry;
 }

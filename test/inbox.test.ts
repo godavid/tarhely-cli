@@ -300,6 +300,28 @@ describe("downloadNewLetters", () => {
     expect(readIndex(outDir)).toHaveLength(2);
   });
 
+  // A jogosultsági bitek Windowson nincsenek értelmezve, ott a teszt nem fut.
+  // A 022 umask nem maszkolja a 0o700/0o600 módokat, ezért pontos egyenlőség várható.
+  it.skipIf(process.platform === "win32")(
+    "creates the letter directory with 0o700 and the letter file and meta.json with 0o600",
+    async () => {
+      const outDir = tempOutDir();
+      const harness = createHarness(
+        [rawRow({ eid: EID_0101, receivedAtMs: Date.UTC(2026, 0, 1, 10) })],
+        { [EID_0101]: { fajlNev: "level-1.pdf" } },
+        { [EID_0101]: Buffer.from("pdf-tartalom-1") }
+      );
+
+      const result = await runDownload(harness, outDir);
+      expect(result.downloaded).toBe(1);
+
+      const dir = letterDir(outDir, EID_0101, "2026-01-01");
+      expect(fs.statSync(dir).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(dir, "level-1.pdf")).mode & 0o777).toBe(0o600);
+      expect(fs.statSync(path.join(dir, "meta.json")).mode & 0o777).toBe(0o600);
+    }
+  );
+
   it("keeps downloading when one letter fails, reports it, keeps it out of index.jsonl and retries it on the next run", async () => {
     const outDir = tempOutDir();
     const harness = createHarness(

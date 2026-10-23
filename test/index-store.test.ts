@@ -72,6 +72,18 @@ describe("appendIndex", () => {
     expect(readIndex(tmpDir)).toEqual([sampleEntry1]);
   });
 
+  // A jogosultsági bitek Windowson nincsenek értelmezve, ott a teszt nem fut.
+  // A 022 umask nem maszkolja a 0o700/0o600 módokat, ezért pontos egyenlőség várható.
+  it.skipIf(process.platform === "win32")(
+    "creates the outDir with 0o700 and index.jsonl with 0o600 permissions",
+    () => {
+      const tmpDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-idx-")), "submappa");
+      appendIndex(tmpDir, sampleEntry1);
+      expect(fs.statSync(tmpDir).mode & 0o777).toBe(0o700);
+      expect(fs.statSync(path.join(tmpDir, INDEX_FILE)).mode & 0o777).toBe(0o600);
+    }
+  );
+
   it("appends multiple entries in order", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-idx-"));
     appendIndex(tmpDir, sampleEntry1);

@@ -40,6 +40,11 @@ export function knownIds(entries: readonly IndexEntry[]): Set<string> {
 }
 
 export function appendIndex(outDir: string, entry: IndexEntry): void {
-  mkdirSync(outDir, { recursive: true });
-  appendFileSync(join(outDir, INDEX_FILE), `${JSON.stringify(entry)}\n`, "utf8");
+  mkdirSync(outDir, { recursive: true, mode: 0o700 });
+  // A `mode` csak a fájl létrehozásakor érvényesül: a meglévő index.jsonl
+  // jogosultságait a későbbi hozzáfűzések nem bántják.
+  appendFileSync(join(outDir, INDEX_FILE), `${JSON.stringify(entry)}\n`, {
+    encoding: "utf8",
+    mode: 0o600
+  });
 }
