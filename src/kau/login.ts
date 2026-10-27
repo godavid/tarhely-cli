@@ -4,8 +4,10 @@
 // lépéssor élesben, napi futásban bevált; a szándékos várakozások a portál lassan
 // renderelődő választólapját és a TOTP-ablak lejáratát kezelik.
 //
-// A belépési lépésekről SZÁNDÉKOSAN nem készül képernyőkép vagy
-// accessibility-snapshot: a kitöltött mezők értéke bekerülne az artefaktumba.
+// INVARIANT: kitöltött belépőmezőről soha nincs képernyőkép vagy aria-snapshot, mert
+// a mezők értéke bekerülne az artefaktumba. Egyetlen kivétel a titkok begépelése előtti
+// hiba: azt `capturable = true` jelöli (a KAÜ-gomb lépése, lent), a képet a
+// `withSession` készíti (src/session.ts). Lásd AGENTS.md, Invariánsok, „Diagnosztika”.
 
 import type { Page } from "playwright";
 
@@ -166,6 +168,8 @@ export async function loginToKau(page: Page, options: LoginOptions, step: StepFn
       `nem található az „${KAU_BUTTON_LABEL}" belépési út (${message(error)})`
     );
     // Itt még semmilyen titok nincs a lapon, a képernyőkép veszélytelen és hasznos.
+    // INVARIANT: capturable csak itt, a #name kitöltése előtt; a fill után dobott hiba
+    // soha nem capturable. Lásd AGENTS.md, Invariánsok, „Diagnosztika”.
     failure.capturable = true;
     throw failure;
   }
