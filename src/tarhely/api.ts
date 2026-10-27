@@ -221,6 +221,8 @@ export async function primeApiHeaders(
 
 // A postafiók-azonosítót KÉTFELŐL ellenőrizzük: rossz address-id-vel egy MÁSIK
 // postafiók iratai jönnének vissza. Az eltérés ezért hiba, nem figyelmeztetés.
+// INVARIANT: az address-id egyezik a kért postafiókéval, különben 4-es kód (más
+// postafiók iratai jönnének). Lásd AGENTS.md, Invariánsok, „Postafiók-elszigetelés”.
 export function apiHeaders(sniffed: SniffedState, mailbox: MailboxRef): Record<string, string> {
   if (sniffed.addressId !== mailbox.addressId) {
     throw portalChangedError(
@@ -241,6 +243,9 @@ export interface PageLike {
   ): Promise<unknown>;
 }
 
+// INVARIANT: a portálhoz csak olvasó hívás mehet (keresés, részletek, letöltés, kvóta);
+// küldés, törlés, áthelyezés, címkézés tilos. Minden REST-hívás ezen a függvényen át megy.
+// Lásd AGENTS.md, Invariánsok, „Csak olvasás”.
 async function apiRequest(
   page: PageLike,
   sniffed: SniffedState,
