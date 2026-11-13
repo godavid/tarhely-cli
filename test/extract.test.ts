@@ -74,6 +74,18 @@ function buildManyEntryZip(entryCount: number): Buffer {
 }
 
 describe("extractZip", () => {
+  it.each([
+    ["a", "a/b"], ["A", "a"], ["a/b", "a\\b"],
+    ["a/./b", "a/b"], ["é", "e\u0301"]
+  ].flatMap(([a, b]) => [[a, b], [b, a]]))("rejects conflicting %s and %s before writing", (a, b) => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-conflict-"));
+    try {
+      const zip = Buffer.from(zipSync({ "safe.txt": Buffer.from("ok"), [a]: Buffer.from("a"), [b]: Buffer.from("b") }));
+      expect(() => extractZip(zip, tmpDir)).toThrow("Ütköző útvonalak");
+      expect(fs.readdirSync(tmpDir)).toEqual([]);
+    } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
+  });
+
   it("extracts zip entries to target directory and returns relative paths", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tarhely-test-"));
     const zipData = Buffer.from(
