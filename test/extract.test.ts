@@ -75,13 +75,15 @@ function buildManyEntryZip(entryCount: number): Buffer {
 
 describe("extractZip", () => {
   it.each(
-    [
-      ["a", "a/b"],
-      ["A", "a"],
-      ["a/b", "a\\b"],
-      ["a/./b", "a/b"],
-      ["é", "e\u0301"]
-    ].flatMap(([a, b]) => [
+    (
+      [
+        ["a", "a/b"],
+        ["A", "a"],
+        ["a/b", "a\\b"],
+        ["a/./b", "a/b"],
+        ["é", "e\u0301"]
+      ] as const
+    ).flatMap<[string, string]>(([a, b]) => [
       [a, b],
       [b, a]
     ])
