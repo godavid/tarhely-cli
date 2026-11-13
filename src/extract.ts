@@ -41,6 +41,7 @@ export function extractZip(bytes: Buffer, targetDir: string): string[] {
   // A lemezre írás csak a teljes szűrés után történik, így ha valamelyik
   // korlát hibát dob, semmi nem kerül a célmappába.
   let total = 0;
+  const normalizedPaths: string[] = [];
   let entryCount = 0;
   const entries = unzipSync(new Uint8Array(bytes), {
     filter(info) {
@@ -58,9 +59,22 @@ export function extractZip(bytes: Buffer, targetDir: string): string[] {
       if (total > MAX_TOTAL_BYTES) {
         throw new Error("A zip kibontott mérete meghaladja a 200 MB-os korlátot.");
       }
+      normalizedPaths.push(
+        posix.normalize(info.name.replace(/\\/g, "/")).normalize("NFC").toLowerCase()
+      );
       return true;
     }
   });
+  const targets = new Set(normalizedPaths);
+  const nestedConflict = normalizedPaths.some((name) => {
+    for (let parent = posix.dirname(name); parent !== "."; parent = posix.dirname(parent)) {
+      if (targets.has(parent)) return true;
+    }
+    return false;
+  });
+  if (targets.size !== normalizedPaths.length || targets.has(".") || nestedConflict) {
+    throw new Error("Ütköző útvonalak a zipben, a kibontás leáll.");
+  }
   const written: string[] = [];
 
   for (const [name, data] of Object.entries(entries)) {
