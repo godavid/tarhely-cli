@@ -59,7 +59,9 @@ export function extractZip(bytes: Buffer, targetDir: string): string[] {
       if (total > MAX_TOTAL_BYTES) {
         throw new Error("A zip kibontott mérete meghaladja a 200 MB-os korlátot.");
       }
-      normalizedPaths.push(posix.normalize(info.name.replace(/\\/g, "/")).normalize("NFC").toLowerCase());
+      normalizedPaths.push(
+        posix.normalize(info.name.replace(/\\/g, "/")).normalize("NFC").toLowerCase()
+      );
       return true;
     }
   });
