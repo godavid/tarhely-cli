@@ -26,7 +26,7 @@ Használat:
 
 Opciók:
   --mailbox <all|sorszám|névrészlet>     melyik postafiók (alap: all)
-  --since YYYY-MM-DD                     csak az ettől érkezett levelek
+  --since YYYY-MM-DD                     download: csak az ettől érkezettek; list: minden levél, a korábbiak isNew: false (felső határ nincs)
   --out <mappa>                          letöltési mappa (alap: ./tarhely)
   --max <n>                              legfeljebb ennyi levél egy futásban (alap: 200)
   --no-extract                           a zipet ne bontsa ki
